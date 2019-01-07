@@ -15,23 +15,27 @@ The `fail2ban_jail.py` module manages Fail2ban jails.
 #### Examples
 ##### Add Jail
 ```yaml
-fail2ban_jail:
-  name: ssh
-  enabled: true
-  port: ssh
-  filter: sshd
-  logpath: /var/log/auth.log
-  maxretry: 6
+- name: add ssh jail
+  fail2ban_jail:
+    name: ssh
+    enabled: true
+    port: ssh
+    filter: sshd
+    logpath: /var/log/auth.log
+    maxretry: 6
+  notify: restart_fail2ban
 ```
 Note: `enabled: false` does not remove the jail's configuration file. See [Remove Jail](#remove-jail) for details on how
 to do this.
 
 ##### Remove Jail
 ```yaml
-fail2ban_jail:
-  name: ssh
-  present: false
-  jail_directory: /etc/fail2ban/jail.d
+- name: remove ssh jail
+  fail2ban_jail:
+    name: ssh
+    present: false
+    jail_directory: /etc/fail2ban/jail.d
+  notify: restart_fail2ban
 ```
 
 ## License
