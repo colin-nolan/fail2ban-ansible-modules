@@ -1,0 +1,15 @@
+FROM python:3
+
+ENV INSTALL_DIRECTORY=/fail2ban-ansible-modules-tests
+ENV PYTHONPATH=${INSTALL_DIRECTORY}
+
+RUN pip --disable-pip-version-check install \
+    coverage \
+    ansible
+
+ADD . ${INSTALL_DIRECTORY}
+WORKDIR /root
+
+WORKDIR "${INSTALL_DIRECTORY}"
+
+CMD ["./run-tests.sh"]
