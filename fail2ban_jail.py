@@ -1,3 +1,8 @@
+#!/usr/bin/python
+
+# Copyright: (c) 2019, Colin Nolan <cn580@alumni.york.ac.uk>
+# MIT License
+
 import configparser
 import os
 from enum import unique, Enum
@@ -155,12 +160,9 @@ def main():
     Main method, called by Ansible.
     """
     module = AnsibleModule(ANSIBLE_ARGUMENT_SPEC, supports_check_mode=True)
-    check_mode = module.check_mode
-    success, information = run(module.params, check_mode)
-    if success:
-        module.exit_json(**information)
-    else:
-        module.fail_json(**information)
+    success, information = run(module.params, module.check_mode)
+    call_method = module.exit_json if success else module.fail_json
+    call_method(**information)
 
 
 if __name__ == "__main__":
