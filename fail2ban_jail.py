@@ -12,6 +12,7 @@ DEFAULT_ENABLED = True
 DEFAULT_PRESENT = True
 DEFAULT_JAIL_DIRECTORY = "/etc/fail2ban/jail.d"
 
+
 @unique
 class AnsibleFail2BanParameter(Enum):
     """
@@ -58,11 +59,10 @@ def is_ansible_managed(file_path: str) -> bool:
 
 def write_configuration(name: str, configuration: Dict[str, str], jails_directory: str):
     """
-    TODO
-    :param name:
-    :param configuration:
-    :param jails_directory:
-    :return:
+    Writes the given configuration as a jail configuration file.
+    :param name: the name of the jail
+    :param configuration: the jail's fail2ban configuration
+    :param jails_directory: the directory storing the jails
     """
     file_path = get_config_file_path(name, jails_directory)
     config_parser = configparser.ConfigParser()
@@ -96,20 +96,21 @@ def read_configuration(file_path: str) -> Tuple[str, Dict[str, str]]:
 
 def get_config_file_path(name: str, jails_directory: str) -> str:
     """
-    TODO
-    :param name:
-    :param jails_directory:
-    :return:
+    Gets the path of the configuration file with the given name in the given jails directory.
+    :param name: name of the configuration file
+    :param jails_directory: jails directory
+    :return: configuration file path
     """
     return os.path.join(jails_directory, "%s.%s" % (name, JAIL_FILE_EXTENSION))
 
 
 def run(configuration: Dict, check_mode: bool=False) -> Tuple[bool, Dict]:
     """
-    TODO
-    :param configuration:
-    :param check_mode:
-    :return:
+    Run the fail2ban jail module (not coupled to Ansible!).
+    :param configuration: input configuration
+    :param check_mode: whether to run in checked mode (dry mode)
+    :return: tuple where the first element is `True` if the run was successful and the second is information about the
+    run
     """
     present = configuration.get(PRESENT_PARAMETER)
     name = configuration.get(AnsibleFail2BanParameter.NAME.value[0])
@@ -118,7 +119,7 @@ def run(configuration: Dict, check_mode: bool=False) -> Tuple[bool, Dict]:
     exists = os.path.exists(file_path)
 
     if exists and not is_ansible_managed(file_path):
-        return False, dict(msg="Cannot work with config file as it is not managed by Ansible: %s" % (file_path,))
+        return False, dict(msg="Cannot work with config file as it is not managed by Ansible: %s" % (file_path, ))
 
     if not present:
         if exists and not check_mode:
