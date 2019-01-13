@@ -74,6 +74,14 @@ class TestFail2banJailModule(unittest.TestCase):
         self.assertTrue(output["changed"])
         self._assert_matching_configuration(jail_name, arguments)
 
+    def test_add_jail_without_max_retry_defined(self):
+        jail_name, arguments = TestFail2banJailModule._generate_ansible_arguments(self.jails_directory)
+        max_retry_parameter = AnsibleFail2BanParameter.MAX_RETRY.value[0]
+        del arguments[max_retry_parameter]
+        success, output = run(arguments)
+        assert success
+        self.assertNotIn(max_retry_parameter, arguments)
+
     def test_add_jail_checked_mode(self):
         jail_name, arguments = TestFail2banJailModule._generate_ansible_arguments(self.jails_directory)
         success, output = run(arguments, True)

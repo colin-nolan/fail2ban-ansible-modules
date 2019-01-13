@@ -128,14 +128,14 @@ def run(configuration, check_mode=False):
     file_path = get_config_file_path(name, jails_directory)
     exists = os.path.exists(file_path)
 
+    max_retries = configuration.get(AnsibleFail2BanParameter.MAX_RETRY.value[0])
     configuration = dict(filter(lambda x: x[1] is not None, {
         AnsibleFail2BanParameter.ENABLED.value[1]: "true" if configuration.get(
             AnsibleFail2BanParameter.ENABLED.value[0]) else "false",
         AnsibleFail2BanParameter.PORT.value[1]: configuration.get(AnsibleFail2BanParameter.PORT.value[0]),
         AnsibleFail2BanParameter.FILTER.value[1]: configuration.get(AnsibleFail2BanParameter.FILTER.value[0]),
         AnsibleFail2BanParameter.LOG_PATH.value[1]: configuration.get(AnsibleFail2BanParameter.LOG_PATH.value[0]),
-        AnsibleFail2BanParameter.MAX_RETRY.value[1]: str(
-            configuration.get(AnsibleFail2BanParameter.MAX_RETRY.value[0])),
+        AnsibleFail2BanParameter.MAX_RETRY.value[1]: str(max_retries) if max_retries is not None else None,
         AnsibleFail2BanParameter.FIND_TIME.value[1]: configuration.get(AnsibleFail2BanParameter.FIND_TIME.value[0]),
         AnsibleFail2BanParameter.BAN_TIME.value[1]: configuration.get(AnsibleFail2BanParameter.BAN_TIME.value[0]),
         AnsibleFail2BanParameter.ACTION.value[1]: configuration.get(AnsibleFail2BanParameter.ACTION.value[0])
