@@ -128,36 +128,41 @@ def run(configuration, check_mode=False):
     file_path = get_config_file_path(name, jails_directory)
     exists = os.path.exists(file_path)
 
+    configuration = dict(filter(lambda x: x[1] is not None, {
+        AnsibleFail2BanParameter.ENABLED.value[1]: "true" if configuration.get(
+            AnsibleFail2BanParameter.ENABLED.value[0]) else "false",
+        AnsibleFail2BanParameter.PORT.value[1]: configuration.get(AnsibleFail2BanParameter.PORT.value[0]),
+        AnsibleFail2BanParameter.FILTER.value[1]: configuration.get(AnsibleFail2BanParameter.FILTER.value[0]),
+        AnsibleFail2BanParameter.LOG_PATH.value[1]: configuration.get(AnsibleFail2BanParameter.LOG_PATH.value[0]),
+        AnsibleFail2BanParameter.MAX_RETRY.value[1]: str(
+            configuration.get(AnsibleFail2BanParameter.MAX_RETRY.value[0])),
+        AnsibleFail2BanParameter.FIND_TIME.value[1]: configuration.get(AnsibleFail2BanParameter.FIND_TIME.value[0]),
+        AnsibleFail2BanParameter.BAN_TIME.value[1]: configuration.get(AnsibleFail2BanParameter.BAN_TIME.value[0]),
+        AnsibleFail2BanParameter.ACTION.value[1]: configuration.get(AnsibleFail2BanParameter.ACTION.value[0])
+    }.items()))
+
     if exists and not is_ansible_managed(file_path):
-        return False, dict(msg="Cannot work with config file as it is not managed by Ansible: %s" % (file_path, ))
+        return False, dict(msg="Cannot work with config file as it is not managed by Ansible: %s" % (file_path, ),
+                           configuration=configuration)
 
     if not present:
         if exists and not check_mode:
             os.remove(file_path)
-        return True, dict(changed=exists)
+        return True, dict(changed=exists, configuration=configuration)
     else:
-        required_configuration = dict(filter(lambda x: x[1] is not None, {
-            AnsibleFail2BanParameter.ENABLED.value[1]: "true" if configuration.get(AnsibleFail2BanParameter.ENABLED.value[0]) else "false",
-            AnsibleFail2BanParameter.PORT.value[1]: configuration.get(AnsibleFail2BanParameter.PORT.value[0]),
-            AnsibleFail2BanParameter.FILTER.value[1]: configuration.get(AnsibleFail2BanParameter.FILTER.value[0]),
-            AnsibleFail2BanParameter.LOG_PATH.value[1]: configuration.get(AnsibleFail2BanParameter.LOG_PATH.value[0]),
-            AnsibleFail2BanParameter.MAX_RETRY.value[1]: str(configuration.get(AnsibleFail2BanParameter.MAX_RETRY.value[0])),
-            AnsibleFail2BanParameter.FIND_TIME.value[1]: configuration.get(AnsibleFail2BanParameter.FIND_TIME.value[0]),
-            AnsibleFail2BanParameter.BAN_TIME.value[1]: configuration.get(AnsibleFail2BanParameter.BAN_TIME.value[0]),
-            AnsibleFail2BanParameter.ACTION.value[1]: configuration.get(AnsibleFail2BanParameter.ACTION.value[0])
-        }.items()))
         if not exists:
             if not check_mode:
-                write_configuration(name, required_configuration, jails_directory)
-            return True, dict(changed=True)
+                write_configuration(name, configuration, jails_directory)
+            return True, dict(changed=True, configuration=configuration)
         else:
             current_name, current_configuration = read_configuration(file_path)
-            if current_configuration != required_configuration or current_name != name:
+            if current_configuration != configuration or current_name != name:
                 if not check_mode:
-                    write_configuration(name, required_configuration, jails_directory)
-                return True, dict(changed=True, previous=current_configuration)
+                    write_configuration(name, configuration, jails_directory)
+                return True, dict(changed=True, previous_configuration=current_configuration,
+                                  configuration=configuration)
             else:
-                return True, dict(changed=False)
+                return True, dict(changed=False, configuration=configuration)
 
 
 def main():
