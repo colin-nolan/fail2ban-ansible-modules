@@ -48,7 +48,7 @@ ANSIBLE_ARGUMENT_SPEC = {
     AnsibleFail2BanParameter.BAN_TIME.value[0]: dict(type="str"),
     AnsibleFail2BanParameter.ACTION.value[0]: dict(type="str"),
     PRESENT_PARAMETER: dict(type="bool", default=DEFAULT_PRESENT),
-    JAILS_DIRECTORY_PARAMETER: dict(type="str")
+    JAILS_DIRECTORY_PARAMETER: dict(type="str", default=DEFAULT_JAIL_DIRECTORY)
 }
 
 
