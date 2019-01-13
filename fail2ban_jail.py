@@ -52,7 +52,8 @@ ANSIBLE_ARGUMENT_SPEC = {
 }
 
 
-def is_ansible_managed(file_path: str) -> bool:
+# def is_ansible_managed(file_path: str) -> bool:
+def is_ansible_managed(file_path):
     """
     Gets whether the fail2ban configuration file at the given path is managed by Ansible.
     :param file_path: the file to check if managed by Ansible
@@ -62,7 +63,8 @@ def is_ansible_managed(file_path: str) -> bool:
         return file.readline().strip() == ANSIBLE_MANAGED_LINE
 
 
-def write_configuration(name: str, configuration: Dict[str, str], jails_directory: str):
+# def write_configuration(name: str, configuration: Dict[str, str], jails_directory: str):
+def write_configuration(name, configuration, jails_directory):
     """
     Writes the given configuration as a jail configuration file.
     :param name: the name of the jail
@@ -78,7 +80,8 @@ def write_configuration(name: str, configuration: Dict[str, str], jails_director
     assert is_ansible_managed(file_path)
 
 
-def read_configuration(file_path: str) -> Tuple[str, Dict[str, str]]:
+# def read_configuration(file_path: str) -> Tuple[str, Dict[str, str]]:
+def read_configuration(file_path):
     """
     Reads the configuration file with the given path.
     :param file_path: path to configuration file
@@ -99,7 +102,8 @@ def read_configuration(file_path: str) -> Tuple[str, Dict[str, str]]:
     return name, dict(config_parser[name])
 
 
-def get_config_file_path(name: str, jails_directory: str) -> str:
+# def get_config_file_path(name: str, jails_directory: str) -> str:
+def get_config_file_path(name, jails_directory):
     """
     Gets the path of the configuration file with the given name in the given jails directory.
     :param name: name of the configuration file
@@ -109,7 +113,8 @@ def get_config_file_path(name: str, jails_directory: str) -> str:
     return os.path.join(jails_directory, "%s.%s" % (name, JAIL_FILE_EXTENSION))
 
 
-def run(configuration: Dict, check_mode: bool=False) -> Tuple[bool, Dict]:
+# def run(configuration: Dict, check_mode: bool=False) -> Tuple[bool, Dict]:
+def run(configuration, check_mode=False):
     """
     Run the fail2ban jail module (not coupled to Ansible!).
     :param configuration: input configuration
