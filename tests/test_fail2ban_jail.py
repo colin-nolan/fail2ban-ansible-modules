@@ -8,7 +8,8 @@ from typing import Dict, Tuple
 from uuid import uuid4
 
 from fail2ban_jail import ANSIBLE_ARGUMENT_SPEC, PRESENT_PARAMETER, run, JAILS_DIRECTORY_PARAMETER, \
-    read_configuration, get_config_file_path, AnsibleFail2BanParameter, ANSIBLE_MANAGED_LINE
+    read_configuration, get_config_file_path, AnsibleFail2BanParameter, ANSIBLE_MANAGED_LINE, FORCE_PARAMETER, \
+    DEFAULT_FORCE_VALUE, DEFAULT_PRESENT_VALUE
 
 _ANSIBLE_NAME_PARAMETER = AnsibleFail2BanParameter.NAME.value[0]
 
@@ -18,12 +19,14 @@ class TestFail2banJailModule(unittest.TestCase):
     Tests for `fail2ban_jail` Ansible module.
     """
     @staticmethod
-    def _generate_ansible_arguments(jails_directory: str, present: bool=True, name: str=None) -> Tuple[str, Dict]:
+    def _generate_ansible_arguments(jails_directory: str, *, present: bool=DEFAULT_PRESENT_VALUE, name: str=None,
+                                    force: bool=DEFAULT_FORCE_VALUE) -> Tuple[str, Dict]:
         """
         Generates Ansible arguments for the fail2ban_jail module.
         :param present: whether the jail should be present
         :param jails_directory: the directory in which jails are located
         :param name: name of the jail
+        :param force: force overwriting of any jail that may already be there and not managed by Ansible
         :return: tuple where the first element is the name of the jail and the second is the Ansible arguments that can
         be used to create it
         """
@@ -44,6 +47,7 @@ class TestFail2banJailModule(unittest.TestCase):
 
         arguments[PRESENT_PARAMETER] = present
         arguments[JAILS_DIRECTORY_PARAMETER] = jails_directory
+        arguments[FORCE_PARAMETER] = force
         return arguments[_ANSIBLE_NAME_PARAMETER], arguments
 
     def setUp(self):
@@ -63,9 +67,9 @@ class TestFail2banJailModule(unittest.TestCase):
                 print("%s=%s" % (parameter.value[1], arguments[parameter.value[0]]), file=file)
 
         name, configuration = read_configuration(file_path)
-        self.assertEquals(jail_name, name)
+        self.assertEqual(jail_name, name)
         for parameter in AnsibleFail2BanParameter:
-            self.assertEquals(str(arguments[parameter.value[0]]), configuration[parameter.value[1]])
+            self.assertEqual(str(arguments[parameter.value[0]]), configuration[parameter.value[1]])
 
     def test_add_jail(self):
         jail_name, arguments = TestFail2banJailModule._generate_ansible_arguments(self.jails_directory)
@@ -120,6 +124,12 @@ class TestFail2banJailModule(unittest.TestCase):
         self._create_non_managed_jail(jail_name)
         success, output = run(arguments)
         self.assertFalse(success)
+
+    def test_change_non_managed_jail_with_force(self):
+        jail_name, arguments = TestFail2banJailModule._generate_ansible_arguments(self.jails_directory, force=True)
+        self._create_non_managed_jail(jail_name)
+        success, output = run(arguments)
+        self.assertTrue(success)
 
     def test_remove_existing_jail(self):
         jail_name, arguments = TestFail2banJailModule._generate_ansible_arguments(self.jails_directory)

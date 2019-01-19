@@ -4,6 +4,7 @@
 # MIT License
 
 import configparser
+from configparser import ParsingError
 import os
 from enum import unique, Enum
 from typing import Dict, Tuple
@@ -13,9 +14,10 @@ from ansible.module_utils.basic import AnsibleModule
 ANSIBLE_MANAGED_LINE = "# Managed by Ansible"
 JAIL_FILE_EXTENSION = "conf"
 
-DEFAULT_ENABLED = True
-DEFAULT_PRESENT = True
-DEFAULT_JAIL_DIRECTORY = "/etc/fail2ban/jail.d"
+DEFAULT_ENABLED_VALUE = True
+DEFAULT_PRESENT_VALUE = True
+DEFAULT_JAIL_DIRECTORY_VALUE = "/etc/fail2ban/jail.d"
+DEFAULT_FORCE_VALUE = False
 
 
 @unique
@@ -36,10 +38,11 @@ class AnsibleFail2BanParameter(Enum):
 
 PRESENT_PARAMETER = "present"
 JAILS_DIRECTORY_PARAMETER = "jail_directory"
+FORCE_PARAMETER = "force"
 
 ANSIBLE_ARGUMENT_SPEC = {
     AnsibleFail2BanParameter.NAME.value[0]: dict(type="str", required=True),
-    AnsibleFail2BanParameter.ENABLED.value[0]: dict(type="bool", default=DEFAULT_ENABLED),
+    AnsibleFail2BanParameter.ENABLED.value[0]: dict(type="bool", default=DEFAULT_ENABLED_VALUE),
     AnsibleFail2BanParameter.PORT.value[0]: dict(type="str"),
     AnsibleFail2BanParameter.FILTER.value[0]: dict(type="str"),
     AnsibleFail2BanParameter.LOG_PATH.value[0]: dict(type="str"),
@@ -47,8 +50,9 @@ ANSIBLE_ARGUMENT_SPEC = {
     AnsibleFail2BanParameter.FIND_TIME.value[0]: dict(type="str"),
     AnsibleFail2BanParameter.BAN_TIME.value[0]: dict(type="str"),
     AnsibleFail2BanParameter.ACTION.value[0]: dict(type="str"),
-    PRESENT_PARAMETER: dict(type="bool", default=DEFAULT_PRESENT),
-    JAILS_DIRECTORY_PARAMETER: dict(type="str", default=DEFAULT_JAIL_DIRECTORY)
+    PRESENT_PARAMETER: dict(type="bool", default=DEFAULT_PRESENT_VALUE),
+    JAILS_DIRECTORY_PARAMETER: dict(type="str", default=DEFAULT_JAIL_DIRECTORY_VALUE),
+    FORCE_PARAMETER: dict(type="bool", default=DEFAULT_JAIL_DIRECTORY_VALUE)
 }
 
 
@@ -85,19 +89,20 @@ def read_configuration(file_path):
     """
     Reads the configuration file with the given path.
     :param file_path: path to configuration file
-    :return: configuration file
-    :raises ValueError: raised if config file is not managed by Ansible
-    :raises SyntaxError: raised if the contents of the configuration file is not as expected
+    :return: tuple where the first element is the name of the jail in the file and the second is the configuration
+    :raises SyntaxError: raised if the contents of the configuration file cannot be parsed
     """
-    if not is_ansible_managed(file_path):
-        raise ValueError("Config file is not managed by Ansible")
-
     config_parser = configparser.ConfigParser()
-    config_parser.read(file_path)
+    try:
+        config_parser.read(file_path)
+        sections = config_parser.sections()
+    except ParsingError as e:
+        raise SyntaxError() from e
 
-    sections = config_parser.sections()
     if len(sections) == 0:
         raise SyntaxError("Config file does not contain any sections")
+    elif len(sections) > 1:
+        raise SyntaxError("Cannot parse config with multiple sections")
     name = sections[0]
     return name, dict(config_parser[name])
 
@@ -127,6 +132,7 @@ def run(configuration, check_mode=False):
     jails_directory = configuration.get(JAILS_DIRECTORY_PARAMETER)
     file_path = get_config_file_path(name, jails_directory)
     exists = os.path.exists(file_path)
+    force = configuration.get(FORCE_PARAMETER)
 
     max_retries = configuration.get(AnsibleFail2BanParameter.MAX_RETRY.value[0])
     configuration = dict(filter(lambda x: x[1] is not None, {
@@ -141,8 +147,9 @@ def run(configuration, check_mode=False):
         AnsibleFail2BanParameter.ACTION.value[1]: configuration.get(AnsibleFail2BanParameter.ACTION.value[0])
     }.items()))
 
-    if exists and not is_ansible_managed(file_path):
-        return False, dict(msg="Cannot work with config file as it is not managed by Ansible: %s" % (file_path, ),
+    if exists and not is_ansible_managed(file_path) and not force:
+        return False, dict(msg="Cannot work with config file as it is not managed by Ansible (set `force=yes` to "
+                               "override): %s" % (file_path, ),
                            configuration=configuration)
 
     if not present:
@@ -155,7 +162,15 @@ def run(configuration, check_mode=False):
                 write_configuration(name, configuration, jails_directory)
             return True, dict(changed=True, configuration=configuration)
         else:
-            current_name, current_configuration = read_configuration(file_path)
+            try:
+                current_name, current_configuration = read_configuration(file_path)
+            except SyntaxError as e:
+                if not force:
+                    return False, dict(msg="Cannot read configuration file (set `force=yes` to overwrite without "
+                                           "reading: %s" % (file_path, ), configuration=configuration)
+                current_name = None
+                current_configuration = {}
+
             if current_configuration != configuration or current_name != name:
                 if not check_mode:
                     write_configuration(name, configuration, jails_directory)
